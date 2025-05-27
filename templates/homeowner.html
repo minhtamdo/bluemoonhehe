@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cổng thông tin cư dân</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-info {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-tab {
+            padding: 15px 30px;
+            margin: 0 5px;
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .content-section {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e1e8ed;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .fee-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .fee-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .fee-item:last-child {
+            border-bottom: none;
+        }
+
+        .fee-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .fee-amount {
+            font-weight: 600;
+            color: #e74c3c;
+            font-size: 1.1rem;
+        }
+
+        .fee-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-unpaid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(86, 171, 47, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .payment-method {
+            background: white;
+            border: 2px solid #e1e8ed;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .payment-method:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .payment-method.selected {
+            border-color: #667eea;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        }
+
+        .request-history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .request-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .request-date {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .request-type {
+            font-weight: 500;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 30px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .nav-tab {
+                margin: 0;
+            }
+
+            .fee-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .payment-methods {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Cổng thông tin cư dân</h1>
+            <div class="welcome-info">
+                Xin chào, <strong id="residentName">Nguyễn Văn A</strong> - Căn hộ: <strong id="apartmentNumber">A1201</strong>
+            </div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('fees')">📊 Theo dõi phí</button>
+            <button class="nav-tab" onclick="showSection('payment')">💳 Đóng phí</button>
+            <button class="nav-tab" onclick="showSection('requests')">📝 Gửi yêu cầu</button>
+            <button class="nav-tab" onclick="showSection('history')">📋 Lịch sử</button>
+        </div>
+
+        <!-- Theo dõi phí -->
+        <div id="fees" class="content-section active">
+            <div class="fee-grid">
+                <div class="card">
+                    <h3>💰 Phí dịch vụ tháng này</h3>
+                    <div class="fee-item">
+                        <span class="fee-name">Phí quản lý</span>
+                        <span class="fee-amount">500,000 VNĐ</span>
+                        <span class="fee-status status-unpaid">Chưa thanh toán</span>
+                    </div>
+                    <div class="fee-item">
+                        <span class="fee-name">Phí vệ sinh</span>
+                        <span class="fee-amount">200,000 VNĐ</span>
+                        <span class="fee-status status-unpaid">Chưa thanh toán</span>
+                    </div>
+                    <div class="fee-item">
+                        <span class="fee-name">Phí bảo vệ</span>
+                        <span class="fee-amount">150,000 VNĐ</span>
+                        <span class="fee-status status-paid">Đã thanh toán</span>
+                    </div>
+                    <div class="fee-item">
+                        <span class="fee-name">Phí gửi xe</span>
+                        <span class="fee-amount">300,000 VNĐ</span>
+                        <span class="fee-status status-unpaid">Chưa thanh toán</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📈 Tổng quan</h3>
+                    <div class="fee-item">
+                        <span class="fee-name">Tổng phí tháng này</span>
+                        <span class="fee-amount">1,150,000 VNĐ</span>
+                    </div>
+                    <div class="fee-item">
+                        <span class="fee-name">Đã thanh toán</span>
+                        <span class="fee-amount" style="color: #27ae60;">150,000 VNĐ</span>
+                    </div>
+                    <div class="fee-item">
+                        <span class="fee-name">Còn phải trả</span>
+                        <span class="fee-amount">1,000,000 VNĐ</span>
+                    </div>
+                    <div class="fee-item">
+                        <span class="fee-name">Hạn thanh toán</span>
+                        <span class="fee-amount" style="color: #f39c12;">15/06/2025</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Đóng phí -->
+        <div id="payment" class="content-section">
+            <div class="card">
+                <h3>💳 Thanh toán phí</h3>
+                <div class="success-message" id="paymentSuccess"></div>
+                <div class="error-message" id="paymentError"></div>
+                
+                <div class="form-group">
+                    <label>Chọn khoản phí cần thanh toán:</label>
+                    <select class="form-control" id="feeSelect">
+                        <option value="">-- Chọn khoản phí --</option>
+                        <option value="management">Phí quản lý - 500,000 VNĐ</option>
+                        <option value="cleaning">Phí vệ sinh - 200,000 VNĐ</option>
+                        <option value="parking">Phí gửi xe - 300,000 VNĐ</option>
+                        <option value="all">Thanh toán tất cả - 1,000,000 VNĐ</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Phương thức thanh toán:</label>
+                    <div class="payment-methods">
+                        <div class="payment-method" onclick="selectPaymentMethod('bank')">
+                            <h4>🏦 Chuyển khoản ngân hàng</h4>
+                            <p>Techcombank - 1234567890</p>
+                        </div>
+                        <div class="payment-method" onclick="selectPaymentMethod('momo')">
+                            <h4>📱 MoMo</h4>
+                            <p>Quét mã QR để thanh toán</p>
+                        </div>
+                        <div class="payment-method" onclick="selectPaymentMethod('zalo')">
+                            <h4>💰 ZaloPay</h4>
+                            <p>Thanh toán qua ZaloPay</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-success" onclick="processPayment()">
+                    💳 Thanh toán ngay
+                </button>
+            </div>
+        </div>
+
+        <!-- Gửi yêu cầu -->
+        <div id="requests" class="content-section">
+            <div class="card">
+                <h3>📝 Gửi yêu cầu mới</h3>
+                <div class="success-message" id="requestSuccess"></div>
+                
+                <div class="form-group">
+                    <label for="requestType">Loại yêu cầu:</label>
+                    <select class="form-control" id="requestType" onchange="showRequestForm()">
+                        <option value="">-- Chọn loại yêu cầu --</option>
+                        <option value="add_resident">Thêm nhân khẩu</option>
+                        <option value="remove_resident">Giảm nhân khẩu</option>
+                        <option value="change_status">Thay đổi trạng thái cư trú</option>
+                        <option value="other">Yêu cầu khác</option>
+                    </select>
+                </div>
+
+                <div id="requestForm" style="display: none;">
+                    <div class="form-group">
+                        <label for="requestDetails">Chi tiết yêu cầu:</label>
+                        <textarea class="form-control" id="requestDetails" rows="4" placeholder="Mô tả chi tiết yêu cầu của bạn..."></textarea>
+                    </div>
+
+                    <div id="addResidentForm" style="display: none;">
+                        <div class="form-group">
+                            <label for="newResidentName">Họ và tên:</label>
+                            <input type="text" class="form-control" id="newResidentName" placeholder="Nhập họ và tên">
+                        </div>
+                        <div class="form-group">
+                            <label for="newResidentId">CCCD/CMND:</label>
+                            <input type="text" class="form-control" id="newResidentId" placeholder="Nhập số CCCD/CMND">
+                        </div>
+                        <div class="form-group">
+                            <label for="relationship">Mối quan hệ:</label>
+                            <select class="form-control" id="relationship">
+                                <option value="">-- Chọn mối quan hệ --</option>
+                                <option value="spouse">Vợ/Chồng</option>
+                                <option value="child">Con</option>
+                                <option value="parent">Cha/Mẹ</option>
+                                <option value="relative">Họ hàng</option>
+                                <option value="other">Khác</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="removeResidentForm" style="display: none;">
+                        <div class="form-group">
+                            <label for="removeResidentName">Chọn người cần giảm:</label>
+                            <select class="form-control" id="removeResidentName">
+                                <option value="">-- Chọn người --</option>
+                                <option value="nguyen_van_b">Nguyễn Văn B</option>
+                                <option value="nguyen_thi_c">Nguyễn Thị C</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="removeReason">Lý do:</label>
+                            <select class="form-control" id="removeReason">
+                                <option value="">-- Chọn lý do --</option>
+                                <option value="moved_out">Chuyển đi nơi khác</option>
+                                <option value="marriage">Kết hôn</option>
+                                <option value="work">Đi làm xa</option>
+                                <option value="other">Lý do khác</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="statusChangeForm" style="display: none;">
+                        <div class="form-group">
+                            <label for="currentStatus">Trạng thái hiện tại:</label>
+                            <select class="form-control" id="currentStatus">
+                                <option value="permanent">Thường trú</option>
+                                <option value="temporary">Tạm trú</option>
+                                <option value="owner">Chủ hộ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="newStatus">Trạng thái mới:</label>
+                            <select class="form-control" id="newStatus">
+                                <option value="">-- Chọn trạng thái mới --</option>
+                                <option value="permanent">Thường trú</option>
+                                <option value="temporary">Tạm trú</option>
+                                <option value="owner">Chủ hộ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="attachments">Đính kèm tài liệu (nếu có):</label>
+                        <input type="file" class="form-control" id="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                        <small style="color: #666;">Chấp nhận: PDF, JPG, PNG, DOC, DOCX. Tối đa 5MB mỗi file.</small>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="submitRequest()">
+                        📤 Gửi yêu cầu
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lịch sử -->
+        <div id="history" class="content-section">
+            <div class="card">
+                <h3>📋 Lịch sử yêu cầu</h3>
+                <div class="request-history">
+                    <div class="request-item">
+                        <div class="request-date">20/05/2025 - 14:30</div>
+                        <div class="request-type">Thêm nhân khẩu - Nguyễn Văn B</div>
+                        <div>Trạng thái: <span style="color: #27ae60; font-weight: 500;">✅ Đã duyệt</span></div>
+                    </div>
+                    <div class="request-item">
+                        <div class="request-date">15/05/2025 - 09:15</div>
+                        <div class="request-type">Thay đổi trạng thái cư trú</div>
+                        <div>Trạng thái: <span style="color: #f39c12; font-weight: 500;">⏳ Đang xử lý</span></div>
+                    </div>
+                    <div class="request-item">
+                        <div class="request-date">10/05/2025 - 16:45</div>
+                        <div class="request-type">Giảm nhân khẩu - Nguyễn Thị C</div>
+                        <div>Trạng thái: <span style="color: #e74c3c; font-weight: 500;">❌ Bị từ chối</span></div>
+                        <div style="margin-top: 5px; font-size: 0.9rem; color: #666;">Lý do: Thiếu giấy tờ chứng minh</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>💳 Lịch sử thanh toán</h3>
+                <div class="request-history">
+                    <div class="request-item">
+                        <div class="request-date">18/05/2025 - 10:20</div>
+                        <div class="request-type">Thanh toán phí bảo vệ tháng 5</div>
+                        <div>Số tiền: <span style="color: #27ae60; font-weight: 500;">150,000 VNĐ</span></div>
+                        <div>Phương thức: Chuyển khoản ngân hàng</div>
+                    </div>
+                    <div class="request-item">
+                        <div class="request-date">15/04/2025 - 14:30</div>
+                        <div class="request-type">Thanh toán phí quản lý tháng 4</div>
+                        <div>Số tiền: <span style="color: #27ae60; font-weight: 500;">500,000 VNĐ</span></div>
+                        <div>Phương thức: MoMo</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal xác nhận thanh toán -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('paymentModal')">&times;</span>
+            <h3>💳 Xác nhận thanh toán</h3>
+            <div id="paymentDetails"></div>
+            <div style="margin-top: 30px; text-align: center;">
+                <button class="btn btn-success" onclick="confirmPayment()">Xác nhận</button>
+                <button class="btn" onclick="closeModal('paymentModal')" style="margin-left: 10px; background: #6c757d; color: white;">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedPaymentMethod = '';
+        let requestData = {};
+
+        function showSection(sectionId) {
+            // Ẩn tất cả các section
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => section.classList.remove('active'));
+
+            // Hiển thị section được chọn
+            document.getElementById(sectionId).classList.add('active');
+
+            // Cập nhật trạng thái tab
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function selectPaymentMethod(method) {
+            // Bỏ lựa chọn trước đó
+            const methods = document.querySelectorAll('.payment-method');
+            methods.forEach(m => m.classList.remove('selected'));
+
+            // Chọn phương thức mới
+            event.target.closest('.payment-method').classList.add('selected');
+            selectedPaymentMethod = method;
+        }
+
+        function processPayment() {
+            const feeSelect = document.getElementById('feeSelect').value;
+            
+            if (!feeSelect) {
+                showMessage('paymentError', 'Vui lòng chọn khoản phí cần thanh toán!');
+                return;
+            }
+
+            if (!selectedPaymentMethod) {
+                showMessage('paymentError', 'Vui lòng chọn phương thức thanh toán!');
+                return;
+            }
+
+            // Hiển thị modal xác nhận
+            const details = getPaymentDetails(feeSelect);
+            document.getElementById('paymentDetails').innerHTML = `
+                <p><strong>Khoản phí:</strong> ${details.name}</p>
+                <p><strong>Số tiền:</strong> ${details.amount}</p>
+                <p><strong>Phương thức:</strong> ${getPaymentMethodName(selectedPaymentMethod)}</p>
+            `;
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+
+        function confirmPayment() {
+            // Giả lập quá trình thanh toán
+            setTimeout(() => {
+                closeModal('paymentModal');
+                showMessage('paymentSuccess', 'Thanh toán thành công! Phí đã được cập nhật.');
+                
+                // Reset form
+                document.getElementById('feeSelect').value = '';
+                selectedPaymentMethod = '';
+                const methods = document.querySelectorAll('.payment-method');
+                methods.forEach(m => m.classList.remove('selected'));
+            }, 1000);
+        }
+
+        function getPaymentDetails(feeType) {
+            const details = {
+                'management': { name: 'Phí quản lý', amount: '500,000 VNĐ' },
+                'cleaning': { name: 'Phí vệ sinh', amount: '200,000 VNĐ' },
+                'parking': { name: 'Phí gửi xe', amount: '300,000 VNĐ' },
+                'all': { name: 'Tất cả các khoản phí', amount: '1,000,000 VNĐ' }
+            };
+            return details[feeType] || { name: '', amount: '0 VNĐ' };
+        }
+
+        function getPaymentMethodName(method) {
+            const names = {
+                'bank': 'Chuyển khoản ngân hàng',
+                'momo': 'MoMo',
+                'zalo': 'ZaloPay'
+            };
+            return names[method] || '';
+        }
+
+        function showRequestForm() {
+            const requestType = document.getElementById('requestType').value;
+            const form = document.getElementById('requestForm');
+            
+            // Ẩn tất cả form con
+            document.getElementById('addResidentForm').style.display = 'none';
+            document.getElementById('removeResidentForm').style.display = 'none';
+            document.getElementById('statusChangeForm').style.display = 'none';
+
+            if (requestType) {
+                form.style.display = 'block';
+                
+                // Hiển thị form tương ứng
+                if (requestType === 'add_resident') {
+                    document.getElementById('addResidentForm').style.display = 'block';
+                } else if (requestType === 'remove_resident') {
+                    document.getElementById('removeResidentForm').style.display = 'block';
+                } else if (requestType === 'change_status') {
+                    document.getElementById('statusChangeForm').style.display = 'block';
+                }
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        function submitRequest() {
+            const requestType = document.getElementById('requestType').value;
+            const requestDetails = document.getElementById('requestDetails').value;
+
+            if (!requestType) {
+                showMessage('requestError', 'Vui lòng chọn loại yêu cầu!');
+                return;
+            }
+
+            if (!requestDetails.trim()) {
+                showMessage('requestError', 'Vui lòng nhập chi tiết yêu cầu!');
+                return;
+            }
+
+            // Validate các trường bắt buộc theo loại yêu cầu
+            if (requestType === 'add_resident') {
+                const name = document.getElementById('newResidentName').value;
+                const id = document.getElementById('newResidentId').value;
+                const relationship = document.getElementById('relationship').value;
+
+                if (!name || !id || !relationship) {
+                    showMessage('requestError', 'Vui lòng điền đầy đủ thông tin người cần thêm!');
+                    return;
+                }
+            } else if (requestType === 'remove_resident') {
+                const person = document.getElementById('removeResidentName').value;
+                const reason = document.getElementById('removeReason').value;
+
+                if (!person || !reason) {
+                    showMessage('requestError', 'Vui lòng chọn người và lý do giảm!');
+                    return;
+                }
+            } else if (requestType === 'change_status') {
+                const currentStatus = document.getElementById('currentStatus').value;
+                const newStatus = document.getElementById('newStatus').value;
+
+                if (!newStatus || currentStatus === newStatus) {
+                    showMessage('requestError', 'Vui lòng chọn trạng thái mới khác với trạng thái hiện tại!');
+                    return;
+                }
+            }
+
+            // Giả lập gửi yêu cầu
+            setTimeout(() => {
+                showMessage('requestSuccess', 'Yêu cầu đã được gửi thành công! Chúng tôi sẽ xử lý trong vòng 3-5 ngày làm việc.');
+                
+                // Reset form
+                resetRequestForm();
+            }, 1000);
+        }
+
+        function resetRequestForm() {
+            document.getElementById('requestType').value = '';
+            document.getElementById('requestDetails').value = '';
+            document.getElementById('requestForm').style.display = 'none';
+            
+            // Reset các form con
+            document.getElementById('newResidentName').value = '';
+            document.getElementById('newResidentId').value = '';
+            document.getElementById('relationship').value = '';
+            document.getElementById('removeResidentName').value = '';
+            document.getElementById('removeReason').value = '';
+            document.getElementById('currentStatus').value = 'permanent';
+            document.getElementById('newStatus').value = '';
+            document.getElementById('attachments').value = '';
+        }
+
+        function showMessage(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            
+            // Ẩn thông báo sau 5 giây
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Đóng modal khi click bên ngoài
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Hiệu ứng loading cho các nút
+        function addLoadingEffect(button) {
+            const originalText = button.textContent;
+            button.textContent = '⏳ Đang xử lý...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 2000);
+        }
+
+        // Khởi tạo dữ liệu mẫu
+        document.addEventListener('DOMContentLoaded', function() {
+            // Có thể thêm các khởi tạo khác ở đây
+            console.log('Cổng thông tin cư dân đã sẵn sàng!');
+        });
+
+        // Xử lý file upload
+        document.getElementById('attachments').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            for (let file of files) {
+                if (file.size > maxSize) {
+                    alert(`File ${file.name} vượt quá kích thước cho phép (5MB)`);
+                    e.target.value = '';
+                    break;
+                }
+            }
+        });
+
+        // Thêm hiệu ứng hover cho các card
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+
+        
