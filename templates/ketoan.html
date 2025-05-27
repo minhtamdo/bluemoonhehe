@@ -1022,23 +1022,31 @@
                 });
             });
 
-            // Search functionality
-            document.getElementById('residentSearch').addEventListener('input', function() {
+            // Search functionality: lọc dữ liệu khi nhập, không submit form, không reload trang
+            document.getElementById('residentSearch').addEventListener('input', function(event) {
                 filterResidents(this.value);
             });
-
-            document.getElementById('feeSearch').addEventListener('input', function() {
+            document.getElementById('feeSearch').addEventListener('input', function(event) {
                 filterFees(this.value);
             });
-
-            document.getElementById('paymentSearch').addEventListener('input', function() {
+            document.getElementById('paymentSearch').addEventListener('input', function(event) {
                 filterPayments(this.value);
             });
 
-            // Form submissions
-            document.getElementById('residentForm').addEventListener('submit', saveResident);
-            document.getElementById('feeForm').addEventListener('submit', saveFee);
-            document.getElementById('paymentForm').addEventListener('submit', savePayment);
+            // Chặn submit mặc định khi nhấn Enter trong các form tìm kiếm (nếu input nằm trong form)
+            ['residentForm', 'feeForm', 'paymentForm'].forEach(formId => {
+                const form = document.getElementById(formId);
+                if (form) {
+                    form.addEventListener('submit', function(event) {
+                        event.preventDefault();  // Chặn reload trang khi submit form
+                        // Sau khi chặn, bạn gọi hàm xử lý submit tương ứng nếu muốn
+                        // Ví dụ:
+                        if (formId === 'residentForm') saveResident(event);
+                        else if (formId === 'feeForm') saveFee(event);
+                        else if (formId === 'paymentForm') savePayment(event);
+                    });
+                }
+            });
 
             // Modal close on outside click
             window.addEventListener('click', function(e) {
