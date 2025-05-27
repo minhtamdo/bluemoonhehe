@@ -22,7 +22,7 @@ from django.utils import timezone
 from django.db.models import Sum, Count, Q, OuterRef, Subquery, Exists
 from datetime import datetime
 from django.template.loader import render_to_string
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
 def ketoan_view(request):
     # Tổng số chủ hộ
@@ -147,8 +147,11 @@ def search_residents(request):
     html = render_to_string('partials/_resident_table_rows.html', {'members': results})
     return JsonResponse({'html': html})
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', ketoan_view, name='home'),  # xử lý root URL
     path('ketoan/', ketoan_view, name='ketoan'),
     path('search-residents/', search_residents, name='search_residents'),
 ]
+
