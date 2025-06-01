@@ -36,13 +36,26 @@ class HouseholdMemberAdmin(admin.ModelAdmin):
 
 @admin.register(Fee)
 class FeeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'type', 'amount', 'due_date', 'created_by_fullname', 'created_at')
+    list_display = (
+        'title', 'type', 'amount', 'due_date',
+        'is_common', 'household_list',
+        'created_by_fullname', 'created_at',
+    )
     search_fields = ('title',)
-    list_filter = ('type', 'due_date')
+    list_filter = ('type', 'due_date', 'is_common')
 
     def created_by_fullname(self, obj):
         return obj.created_by.fullname if obj.created_by else "(None)"
     created_by_fullname.short_description = 'Created By'
+
+    def household_list(self, obj):
+        if obj.is_common:
+            return "Tất cả"
+        households = obj.households.all()
+        if not households:
+            return "(Không có)"
+        return ", ".join(h.household_number for h in households)
+    household_list.short_description = 'Áp dụng cho hộ'
 
 
 @admin.register(Payment)

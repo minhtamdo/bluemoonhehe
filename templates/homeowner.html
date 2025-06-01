@@ -353,6 +353,21 @@
             display: none;
         }
 
+        .logout-link {
+            color: white;
+            margin-left: 5px;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .logout-link:hover {
+            color: black; /* Khi di chuột vào sẽ đổi thành đen */
+        }
+        .fee-amount {
+            display: inline-block;
+            width: 120px; /* hoặc tùy chỉnh theo chiều rộng mong muốn */
+            text-align: right;
+        }
         @media (max-width: 768px) {
             .nav-tabs {
                 flex-direction: column;
@@ -386,10 +401,10 @@
         <div class="header">
             <h1>🏠 Cổng thông tin cư dân</h1>
             <div class="welcome-info">
-                Xin chào, <strong id="residentName">Nguyễn Văn A</strong> - Căn hộ: <strong id="apartmentNumber">A1201</strong>
+                Xin chào, <strong id="residentName">{{ fullname }}</strong> - Căn hộ: <strong id="apartmentNumber">{{ apartment_number }}</strong>
+                <a href="{% url 'logout' %}" class="logout-link" onclick="return confirmLogout()">🚪 Đăng xuất</a>
             </div>
         </div>
-
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showSection('fees')">📊 Theo dõi phí</button>
             <button class="nav-tab" onclick="showSection('payment')">💳 Đóng phí</button>
@@ -402,28 +417,16 @@
             <div class="fee-grid">
                 <div class="card">
                     <h3>💰 Phí dịch vụ tháng này</h3>
-                    <div class="fee-item">
-                        <span class="fee-name">Phí quản lý</span>
-                        <span class="fee-amount">500,000 VNĐ</span>
-                        <span class="fee-status status-unpaid">Chưa thanh toán</span>
-                    </div>
-                    <div class="fee-item">
-                        <span class="fee-name">Phí vệ sinh</span>
-                        <span class="fee-amount">200,000 VNĐ</span>
-                        <span class="fee-status status-unpaid">Chưa thanh toán</span>
-                    </div>
-                    <div class="fee-item">
-                        <span class="fee-name">Phí bảo vệ</span>
-                        <span class="fee-amount">150,000 VNĐ</span>
-                        <span class="fee-status status-paid">Đã thanh toán</span>
-                    </div>
-                    <div class="fee-item">
-                        <span class="fee-name">Phí gửi xe</span>
-                        <span class="fee-amount">300,000 VNĐ</span>
-                        <span class="fee-status status-unpaid">Chưa thanh toán</span>
-                    </div>
+                    {% for fee in fee_status_list %}
+                        <div class="fee-item">
+                            <span class="fee-name">{{ fee.title }}</span>
+                            <span class="fee-amount">{{ fee.amount }}</span>
+                            <span class="fee-status {% if fee.status == 'paid' %}status-paid{% else %}status-unpaid{% endif %}">
+                                {% if fee.status == 'paid' %}Đã thanh toán{% else %}Chưa thanh toán{% endif %}
+                            </span>
+                        </div>
+                    {% endfor %}
                 </div>
-
                 <div class="card">
                     <h3>📈 Tổng quan</h3>
                     <div class="fee-item">
@@ -887,6 +890,9 @@
                 this.style.transform = 'translateY(0)';
             });
         });
+        function confirmLogout() {
+    return confirm("Đăng xuất khỏi tài khoản của bạn?");
+}
     </script>
 
         

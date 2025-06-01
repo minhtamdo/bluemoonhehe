@@ -134,7 +134,9 @@ class Fee(models.Model):
     type = models.CharField(max_length=20, choices=FEE_TYPE)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     due_date = models.DateField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='fees', db_column='created_by')
+    is_common = models.BooleanField(default=True, db_column='is_common')  # NEW FIELD
+    households = models.ManyToManyField('Household', blank=True, related_name='private_fees', db_table='fee_households')  # NEW FIELD
+    created_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='fees', db_column='created_by')
     created_at = models.DateTimeField()
 
     class Meta:
@@ -146,7 +148,7 @@ class Fee(models.Model):
 
 class Payment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='payment_id')
-    fee = models.ForeignKey(Fee, on_delete=models.CASCADE, related_name='payments', db_column='fee_id')
+    fee = models.ForeignKey(Fee, on_delete=models.CASCADE, related_name='payments', db_column='fee_id', null=True)
     household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name='payments', db_column='household_id')
     paid_at = models.DateTimeField()
     method = models.CharField(max_length=20, choices=PAYMENT_METHOD)
@@ -158,7 +160,7 @@ class Payment(models.Model):
 
 class HouseholdChange(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_column='change_id')
-    household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name='changes', db_column='household_id')
+    household = models.ForeignKey(Household, on_delete=models.CASCADE, null=True, related_name='changes', db_column='household_id')
     change_type = models.CharField(max_length=20, choices=CHANGE_TYPE)
     description = models.TextField()
     requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='changes_requested', db_column='requested_by')

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống quản lý thu phí chung cư</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -308,6 +309,7 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(5px);
+            overflow: hidden;
         }
 
         .modal-content {
@@ -319,6 +321,11 @@
             max-width: 600px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: modalSlideIn 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .modal-body {
+            overflow-y: auto;
         }
 
         @keyframes modalSlideIn {
@@ -364,12 +371,12 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             font-weight: 600;
             color: #333;
         }
@@ -378,7 +385,7 @@
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 12px 15px;
+            padding: 5px 15px;
             border: 2px solid #e9ecef;
             border-radius: 8px;
             font-size: 1rem;
@@ -450,6 +457,17 @@
                 padding: 20px;
             }
         }
+        .logout-link {
+    color: #666;
+    margin-left: 5px;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.logout-link:hover {
+    color: black; /* Khi di chuột vào sẽ đổi thành đen */
+}
+
     </style>
 </head>
 <body>
@@ -470,7 +488,7 @@
                 💰 Quản lý phí
             </a>
             <a href="#" class="nav-item" data-section="payments">
-                💳 Thu chi
+                💳 Thanh toán
             </a>
             <a href="#" class="nav-item" data-section="reports">
                 📈 Báo cáo
@@ -487,9 +505,9 @@
                 <h2 id="pageTitle">Tổng quan</h2>
             </div>
             <div class="user-info">
-                <span>👤 Admin</span>
+                <span>👤 {{ fullname }}</span>
                 <span>|</span>
-                <span id="currentDate"></span>
+                <a href="{% url 'logout' %}" class="logout-link" onclick="return confirmLogout()">🚪 Đăng xuất</a>
             </div>
         </div>
 
@@ -506,7 +524,7 @@
                         <div class="label">Tổng số cư dân</div>
                     </div>
                     <div class="stat-card">
-                        <div class="number" id="totalRevenue">{{ total_revenue }}$</div>
+                        <div class="number" id="totalRevenue">${{ total_revenue }}</div>
                         <div class="label">Doanh thu tháng</div>
                     </div>
                     <div class="stat-card">
@@ -522,7 +540,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
                     <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
                         <h4 style="margin-bottom: 15px; color: #333;">📈 Thống kê theo tháng</h4>
-                        <p style="color: #666;">Doanh thu tháng này: <strong style="color: #28a745;">{{ total_revenue }}$</strong></p>
+                        <p style="color: #666;">Doanh thu tháng này: <strong style="color: #28a745;">${{ total_revenue }}</strong></p>
                         <p style="color: #666;">
                             So với tháng trước:
                             {% if change_percent is not None %}
@@ -549,9 +567,9 @@
                         <p style="color: #666;">Hóa đơn quá hạn: <strong style="color: #dc3545;">{{ overdue_bills }} hóa đơn</strong></p>
                         <p style="color: #666;">Tổng nợ: 
                             {% if total_debt %}
-                            <strong style="color: #dc3545;">{{ total_debt|floatformat:0 }}$</strong>
+                            <strong style="color: #dc3545;">${{ total_debt|floatformat:0 }}</strong>
                             {% else %}
-                            <strong style="color: #dc3545;">0$</strong>
+                            <strong style="color: #dc3545;">$0</strong>
                             {% endif %}
                         </p>
                         <p style="color: #666;">Cần liên hệ: 
@@ -572,10 +590,10 @@
     </div>
     <div class="section-body">
         <div class="controls">
-                    <input type="text" id="residentSearch" name="q" placeholder="🔍 Tìm kiếm cư dân..." value="{{ search_query|default:'' }}">
-            <button class="btn btn-primary" onclick="openResidentModal()">
-                ➕ Thêm cư dân mới
-            </button>
+            <div class="search-box">
+                <input type="text" id="residentSearch" placeholder="🔍 Tìm kiếm cư dân...">
+            </div>   
+
         </div>
 
         <div class="table-container">
@@ -600,7 +618,7 @@
                         <th>Ngày nhập hộ</th>
                     </tr>
                 </thead>
-    <tbody>
+    <tbody id="residentsTable">
         {% for member in members %}
         <tr>
             <td>{{ member.full_name }}</td>
@@ -650,20 +668,38 @@
 
                 <div class="table-container">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Tên phí</th>
-                                <th>Mức phí</th>
-                                <th>Đơn vị tính</th>
-                                <th>Mô tả</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody id="feesTable">
-                            <!-- Data will be populated by JavaScript -->
-                        </tbody>
-                    </table>
+    <thead>
+        <tr>
+            <th>Tên phí</th>
+            <th>Số tiền</th>
+            <th>Loại</th>
+            <th>Hạn thanh toán</th>
+            <th>Mô tả</th>
+            <th>Phí chung</th> <!-- thêm cột mới -->
+            <th>Người tạo</th>
+            <th>Ngày tạo</th>
+        </tr>
+    </thead>
+    <tbody id="feesTable">
+        {% for fee in fees %}
+            <tr>
+                <td>{{ fee.title }}</td>
+                <td>{{ fee.amount }}</td>
+                <td>{{ fee.get_type_display }}</td>
+                <td>{{ fee.due_date }}</td>
+                <td>{{ fee.description }}</td>
+                <td>{% if fee.is_common %}Y{% else %}N{% endif %}</td> <!-- giá trị phí chung -->
+                <td>{{ fee.created_by.fullname }}</td>
+                <td>{{ fee.created_at }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8">Không có khoản phí nào</td> <!-- sửa colspan = 8 -->
+            </tr>
+        {% endfor %}
+    </tbody> 
+</table>
+
                 </div>
             </div>
         </section>
@@ -671,7 +707,7 @@
         <!-- Payments Section -->
         <section class="content-section" id="payments">
             <div class="section-header">
-                <h3>💳 Quản lý thu chi</h3>
+                <h3>💳 Quản lý thanh toán</h3>
                 <p>Theo dõi các khoản thu và chi trong chung cư</p>
             </div>
             <div class="section-body">
@@ -685,22 +721,45 @@
                 </div>
 
                 <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ngày</th>
-                                <th>Căn hộ</th>
-                                <th>Loại phí</th>
-                                <th>Số tiền</th>
-                                <th>Trạng thái</th>
-                                <th>Ghi chú</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody id="paymentsTable">
-                            <!-- Data will be populated by JavaScript -->
-                        </tbody>
-                    </table>
+                    <div class="controls">
+</div>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Ngày thanh toán</th>
+                <th>Căn hộ</th>
+                <th>Loại phí</th>
+                <th>Số tiền</th>
+                <th>Trạng thái</th>
+                <th>Phương thức</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody id="paymentsTable">
+            {% for payment in payments %}
+            <tr>
+                <td>{{ payment.paid_at|date:"d/m/Y H:i" }}</td>
+                <td>{{ payment.household.household_number }}</td>
+                <td>{{ payment.fee.title }}</td>
+                <td>{{ payment.fee.amount|floatformat:0 }}</td>
+                <td>{{ payment.get_status_display }}</td>
+                <td>{{ payment.get_method_display }}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openPaymentEditModal('{{ payment.id }}', '{{ payment.paid_at|date:"Y-m-d\\TH:i" }}', '{{ payment.status }}', '{{ payment.method }}')">
+    Sửa
+</button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">Không có giao dịch nào</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
                 </div>
             </div>
         </section>
@@ -714,80 +773,56 @@
             <div class="section-body">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
                     <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
-                        <h4 style="margin-bottom: 20px; color: #333;">📊 Báo cáo tháng</h4>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Chọn tháng:</label>
-                            <input type="month" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                        </div>
-                        <button class="btn btn-primary" style="width: 100%;">Xuất báo cáo</button>
-                    </div>
+    <h4 style="margin-bottom: 20px; color: #333;">📊 Báo cáo tháng</h4>
+    <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Chọn tháng:</label>
+        <input type="month" id="reportMonth" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+    </div>
+    <button class="btn btn-primary" style="width: 100%;" onclick="exportReport()">Xuất báo cáo</button>
+</div>
+
 
                     <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
-                        <h4 style="margin-bottom: 20px; color: #333;">📋 Danh sách nợ</h4>
-                        <p style="color: #666; margin-bottom: 15px;">Xuất danh sách các hộ gia đình còn nợ phí</p>
-                        <button class="btn btn-warning" style="width: 100%;">Xuất danh sách nợ</button>
-                    </div>
+    <h4 style="margin-bottom: 20px; color: #333;">📋 Danh sách nợ</h4>
+    <p style="color: #666; margin-bottom: 15px;">Xuất danh sách các hộ gia đình còn nợ phí</p>
+    <button class="btn btn-warning" style="width: 100%;" onclick="exportDebtList()">Xuất danh sách nợ</button>
+</div>
 
                     <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
-                        <h4 style="margin-bottom: 20px; color: #333;">💰 Báo cáo doanh thu</h4>
-                        <p style="color: #666; margin-bottom: 15px;">Thống kê doanh thu theo thời gian</p>
-                        <button class="btn btn-success" style="width: 100%;">Xem báo cáo</button>
+                        <h4 style="margin-bottom: 5px; color: #333;">💰 Báo cáo doanh thu</h4>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                        <p style="color: #666;">Doanh thu tháng này: <strong style="color: #28a745;">${{ total_revenue }}</strong></p>
+                        <p style="color: #666;">
+                            So với tháng trước:
+                            {% if change_percent is not None %}
+                                {% if change_percent >= 0 %}
+                                    <strong style="color: #28a745;">+{{ change_percent|floatformat:1 }}%</strong>
+                                {% else %}
+                                    <strong style="color: red;">{{ change_percent|floatformat:1 }}%</strong>
+                                {% endif %}
+                            {% else %}
+                            <strong>Không có dữ liệu tháng trước</strong>
+                            {% endif %}
+                        </p>
+                        <p style="color: #666;">
+                        Tỷ lệ thu:
+                        {% if collection_rate is not None %}
+                        <strong style="color: #17a2b8;">{{ collection_rate|floatformat:1 }}%</strong>
+                        {% else %}
+                        <strong>Không có dữ liệu</strong>
+                        {% endif %}
+                        </p>
+                    </div>
                     </div>
                 </div>
 
                 <div style="margin-top: 30px; background: #f8f9fa; padding: 25px; border-radius: 10px;">
-                    <h4 style="margin-bottom: 20px; color: #333;">📈 Biểu đồ thống kê</h4>
-                    <div style="height: 300px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #666;">
-                        <p>Biểu đồ thống kê doanh thu theo tháng sẽ hiển thị tại đây</p>
-                    </div>
-                </div>
+                    <h4 style="margin-bottom: 20px; color: #333;">📈 Biểu đồ thống kê tháng này</h4>
+                    <div style="height: 100%; width: 100%; background: white; border-radius: 10px; padding: 20px;">
+    <canvas id="revenuePieChart" style="width: 100%; height: 100%;"></canvas>
+</div>
             </div>
         </section>
-    </div>
-
-    <!-- Resident Modal -->
-    <div id="residentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="residentModalTitle">Thêm cư dân mới</h3>
-                <span class="close" onclick="closeModal('residentModal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="residentForm">
-                    <div class="form-group">
-                        <label for="apartmentNumber">Số căn hộ *</label>
-                        <input type="text" id="apartmentNumber" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="ownerName">Tên chủ hộ *</label>
-                        <input type="text" id="ownerName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Số điện thoại</label>
-                        <input type="tel" id="phone">
-                    </div>
-                    <div class="form-group">
-                        <label for="area">Diện tích (m²)</label>
-                        <input type="number" id="area" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email">
-                    </div>
-                    <div class="form-group">
-                        <label for="residentStatus">Trạng thái</label>
-                        <select id="residentStatus">
-                            <option value="active">Đang ở</option>
-                            <option value="inactive">Tạm vắng</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn" style="background: #6c757d; color: white;" onclick="closeModal('residentModal')">Hủy</button>
-                        <button type="submit" class="btn btn-success">Lưu</button>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 
     <!-- Fee Modal -->
@@ -799,44 +834,109 @@
             </div>
             <div class="modal-body">
                 <form id="feeForm">
-                    <div class="form-group">
-                        <label for="feeName">Tên phí *</label>
-                        <input type="text" id="feeName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="feeAmount">Mức phí *</label>
-                        <input type="number" id="feeAmount" required step="1000">
-                    </div>
-                    <div class="form-group">
-                        <label for="feeUnit">Đơn vị tính</label>
-                        <select id="feeUnit">
-                            <option value="per_month">Tháng</option>
-                            <option value="per_m2">m²</option>
-                            <option value="per_person">Người</option>
-                            <option value="fixed">Cố định</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="feeDescription">Mô tả</label>
-                        <textarea id="feeDescription" rows="3"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="feeStatus">Trạng thái</label>
-                        <select id="feeStatus">
-                            <option value="active">Áp dụng</option>
-                            <option value="inactive">Tạm dừng</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn" style="background: #6c757d; color: white;" onclick="closeModal('feeModal')">Hủy</button>
-                        <button type="submit" class="btn btn-success">Lưu</button>
-                    </div>
-                </form>
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="feeName">Tên phí *</label>
+        <input type="text" id="feeName" name="title" required>
+    </div>
+    <div class="form-group">
+        <label for="feeAmount">Mức phí *</label>
+        <input type="number" id="feeAmount" name="amount" required step="1">
+    </div>
+    <div class="form-group">
+        <label for="feeUnit">Loại phí *</label>
+        <select id="feeUnit" name="type" required>
+            <option value="voluntary">Voluntary</option>
+            <option value="mandatory">Mandatory</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="feeDueDate">Hạn đóng *</label>
+        <input type="date" id="feeDueDate" name="due_date" required>
+    </div>
+    <div class="form-group">
+        <label for="feeDescription">Mô tả</label>
+        <textarea id="feeDescription" name="description" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+    <label for="isCommon">Là phí chung?</label>
+    <select id="isCommon" name="is_common" required onchange="toggleHouseholdSelect(this.value)">
+        <option value="true" selected>Có</option>
+        <option value="false">Không</option>
+    </select>
+</div>
+
+<div class="form-group" id="householdSelectGroup" style="display: none;">
+    <label for="households">Chọn hộ áp dụng (nếu không phải phí chung)</label>
+    <select id="households" name="households" multiple>
+        {% for household in households %}
+            <option value="{{ household.id }}">{{ household.household_number }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+    <div class="form-group">
+        <label for="feeStatus">Trạng thái</label>
+        <select id="feeStatus" name="status">
+            <option value="active">Áp dụng</option>
+            <option value="inactive">Tạm dừng</option>
+        </select>
+    </div>
+    <div class="form-actions">
+        <button type="button" class="btn" onclick="closeModal('feeModal')">Hủy</button>
+        <button type="submit" class="btn btn-success">Lưu</button>
+    </div>
+</form>
+
             </div>
         </div>
     </div>
 
     <!-- Payment Modal -->
+    <div id="editPaymentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Chỉnh sửa giao dịch</h3>
+            <span class="close" onclick="closeModal('editPaymentModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="editPaymentForm" method="POST" onsubmit="submitEditForm(event)">
+    {% csrf_token %}
+    <input type="hidden" id="editPaymentId" name="payment_id">
+
+    <div class="form-group">
+        <label for="editPaidAt">Ngày thanh toán</label>
+        <input type="datetime-local" id="editPaidAt" name="paid_at">
+    </div>
+
+    <div class="form-group">
+        <label for="editStatus">Trạng thái</label>
+        <select id="editStatus" name="status">
+            <option value="unpaid">Chưa nộp</option>
+            <option value="paid">Đã nộp</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="editMethod">Phương thức</label>
+        <select id="editMethod" name="method">
+            <option value="cash">Tiền mặt</option>
+            <option value="card">Thẻ</option>
+            <option value="qr_code">QR</option>
+        </select>
+    </div>
+
+    <div class="form-actions">
+        <button type="button" onclick="closeModal('editPaymentModal')" class="btn">Hủy</button>
+        <button type="submit" class="btn btn-success">Lưu thay đổi</button>
+    </div>
+</form>
+
+
+        </div>
+    </div>
+</div>
+
     <div id="paymentModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -845,43 +945,55 @@
             </div>
             <div class="modal-body">
                 <form id="paymentForm">
-                    <div class="form-group">
-                        <label for="paymentDate">Ngày thanh toán *</label>
-                        <input type="date" id="paymentDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="paymentApartment">Căn hộ *</label>
-                        <select id="paymentApartment" required>
-                            <option value="">Chọn căn hộ</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="paymentFeeType">Loại phí *</label>
-                        <select id="paymentFeeType" required>
-                            <option value="">Chọn loại phí</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="paymentAmount">Số tiền *</label>
-                        <input type="number" id="paymentAmount" required step="1000">
-                    </div>
-                    <div class="form-group">
-                        <label for="paymentStatus">Trạng thái</label>
-                        <select id="paymentStatus">
-                            <option value="paid">Đã thanh toán</option>
-                            <option value="unpaid">Chưa thanh toán</option>
-                            <option value="overdue">Quá hạn</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="paymentNote">Ghi chú</label>
-                        <textarea id="paymentNote" rows="2"></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn" style="background: #6c757d; color: white;" onclick="closeModal('paymentModal')">Hủy</button>
-                        <button type="submit" class="btn btn-success">Lưu</button>
-                    </div>
-                </form>
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="paymentDate">Ngày thanh toán *</label>
+        <input type="datetime-local" id="paymentDate" name="paid_at" required>
+    </div>
+
+    <div class="form-group">
+        <label for="paymentHousehold">Hộ gia đình *</label>
+        <select id="paymentHousehold" name="household" required>
+            <option value="">Chọn hộ</option>
+            {% for household in households %}
+            <option value="{{ household.id }}">{{ household.household_number }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="paymentFee">Loại phí *</label>
+        <select id="paymentFee" name="fee" required>
+            <option value="">Chọn loại phí</option>
+            {% for fee in fees %}
+            <option value="{{ fee.id }}">{{ fee.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="paymentMethod">Phương thức *</label>
+        <select id="paymentMethod" name="method" required>
+            <option value="cash">Tiền mặt</option>
+            <option value="bank_transfer">Chuyển khoản</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="paymentStatus">Trạng thái *</label>
+        <select id="paymentStatus" name="status" required>
+            <option value="paid">Đã thanh toán</option>
+            <option value="unpaid">Chưa thanh toán</option>
+            <option value="overdue">Quá hạn</option>
+        </select>
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn" onclick="closeModal('paymentModal')">Hủy</button>
+        <button type="submit" class="btn btn-success">Lưu</button>
+    </div>
+</form>
+
             </div>
         </div>
     </div>
@@ -982,8 +1094,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
             updateCurrentDate();
-            renderAllData();
-            updateDashboardStats();
+            //renderAllData();
+            //updateDashboardStats();
         });
 
         // Setup event listeners
@@ -1010,7 +1122,7 @@
                         dashboard: 'Tổng quan',
                         residents: 'Cư dân',
                         fees: 'Quản lý phí',
-                        payments: 'Thu chi',
+                        payments: 'Thanh toán',
                         reports: 'Báo cáo'
                     };
                     document.getElementById('pageTitle').textContent = titles[section];
@@ -1023,18 +1135,48 @@
             });
 
             // Search functionality: lọc dữ liệu khi nhập, không submit form, không reload trang
-            document.getElementById('residentSearch').addEventListener('input', function(event) {
-                filterResidents(this.value);
-            });
-            document.getElementById('feeSearch').addEventListener('input', function(event) {
-                filterFees(this.value);
-            });
-            document.getElementById('paymentSearch').addEventListener('input', function(event) {
-                filterPayments(this.value);
-            });
+            document.getElementById('residentSearch').addEventListener('input', function () {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#residentsTable tr');
+
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const match = Array.from(cells).some(cell =>
+            cell.textContent.toLowerCase().includes(filter)
+        );
+        row.style.display = match ? '' : 'none';
+    });
+});
+
+            document.getElementById('feeSearch').addEventListener('input', function () {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#feesTable tr');
+
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const match = Array.from(cells).some(cell =>
+            cell.textContent.toLowerCase().includes(filter)
+        );
+        row.style.display = match ? '' : 'none';
+    });
+});
+
+            document.getElementById('paymentSearch').addEventListener('input', function () {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#paymentsTable tr');
+
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const match = Array.from(cells).some(cell =>
+            cell.textContent.toLowerCase().includes(filter)
+        );
+        row.style.display = match ? '' : 'none';
+    });
+});
+
 
             // Chặn submit mặc định khi nhấn Enter trong các form tìm kiếm (nếu input nằm trong form)
-            ['residentForm', 'feeForm', 'paymentForm'].forEach(formId => {
+            ['residentForm', 'paymentForm'].forEach(formId => {
                 const form = document.getElementById(formId);
                 if (form) {
                     form.addEventListener('submit', function(event) {
@@ -1042,7 +1184,7 @@
                         // Sau khi chặn, bạn gọi hàm xử lý submit tương ứng nếu muốn
                         // Ví dụ:
                         if (formId === 'residentForm') saveResident(event);
-                        else if (formId === 'feeForm') saveFee(event);
+                        //else if (formId === 'feeForm') saveFee(event);
                         else if (formId === 'paymentForm') savePayment(event);
                     });
                 }
@@ -1089,107 +1231,107 @@
         // }
 
         // Render all data
-        function renderAllData() {
-            renderResidents();
-            renderFees();
-            renderPayments();
-            populateSelectOptions();
-        }
+        // function renderAllData() {
+        //     // renderResidents();
+        //     renderFees();
+        //     renderPayments();
+        //     //populateSelectOptions();
+        // }
 
         // Render residents table
-        function renderResidents(data = residents) {
-            const tbody = document.getElementById('residentsTable');
-            tbody.innerHTML = data.map(resident => `
-                <tr>
-                    <td><strong>${resident.apartmentNumber}</strong></td>
-                    <td>${resident.ownerName}</td>
-                    <td>${resident.phone || 'Chưa có'}</td>
-                    <td>${resident.area ? resident.area + ' m²' : 'Chưa có'}</td>
-                    <td>
-                        <span class="status-badge ${resident.status === 'active' ? 'status-paid' : 'status-unpaid'}">
-                            ${resident.status === 'active' ? '🟢 Đang ở' : '⭕ Tạm vắng'}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-warning" style="padding: 8px 15px; margin-right: 5px;" onclick="editResident(${resident.id})">
-                            ✏️ Sửa
-                        </button>
-                        <button class="btn btn-danger" style="padding: 8px 15px;" onclick="deleteResident(${resident.id})">
-                            🗑️ Xóa
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+        // function renderResidents(data = residents) {
+        //     const tbody = document.getElementById('residentsTable');
+        //     tbody.innerHTML = data.map(resident => `
+        //         <tr>
+        //             <td><strong>${resident.apartmentNumber}</strong></td>
+        //             <td>${resident.ownerName}</td>
+        //             <td>${resident.phone || 'Chưa có'}</td>
+        //             <td>${resident.area ? resident.area + ' m²' : 'Chưa có'}</td>
+        //             <td>
+        //                 <span class="status-badge ${resident.status === 'active' ? 'status-paid' : 'status-unpaid'}">
+        //                     ${resident.status === 'active' ? '🟢 Đang ở' : '⭕ Tạm vắng'}
+        //                 </span>
+        //             </td>
+        //             <td>
+        //                 <button class="btn btn-warning" style="padding: 8px 15px; margin-right: 5px;" onclick="editResident(${resident.id})">
+        //                     ✏️ Sửa
+        //                 </button>
+        //                 <button class="btn btn-danger" style="padding: 8px 15px;" onclick="deleteResident(${resident.id})">
+        //                     🗑️ Xóa
+        //                 </button>
+        //             </td>
+        //         </tr>
+        //     `).join('');
+        // }
 
         // Render fees table
-        function renderFees(data = fees) {
-            const tbody = document.getElementById('feesTable');
-            tbody.innerHTML = data.map(fee => `
-                <tr>
-                    <td><strong>${fee.name}</strong></td>
-                    <td>${formatCurrency(fee.amount)}</td>
-                    <td>${getFeeUnitText(fee.unit)}</td>
-                    <td>${fee.description || 'Không có mô tả'}</td>
-                    <td>
-                        <span class="status-badge ${fee.status === 'active' ? 'status-paid' : 'status-unpaid'}">
-                            ${fee.status === 'active' ? '🟢 Áp dụng' : '⭕ Tạm dừng'}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-warning" style="padding: 8px 15px; margin-right: 5px;" onclick="editFee(${fee.id})">
-                            ✏️ Sửa
-                        </button>
-                        <button class="btn btn-danger" style="padding: 8px 15px;" onclick="deleteFee(${fee.id})">
-                            🗑️ Xóa
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+        // function renderFees(data = fees) {
+        //     const tbody = document.getElementById('feesTable');
+        //     tbody.innerHTML = data.map(fee => `
+        //         <tr>
+        //             <td><strong>${fee.name}</strong></td>
+        //             <td>${formatCurrency(fee.amount)}</td>
+        //             <td>${getFeeUnitText(fee.unit)}</td>
+        //             <td>${fee.description || 'Không có mô tả'}</td>
+        //             <td>
+        //                 <span class="status-badge ${fee.status === 'active' ? 'status-paid' : 'status-unpaid'}">
+        //                     ${fee.status === 'active' ? '🟢 Áp dụng' : '⭕ Tạm dừng'}
+        //                 </span>
+        //             </td>
+        //             <td>
+        //                 <button class="btn btn-warning" style="padding: 8px 15px; margin-right: 5px;" onclick="editFee(${fee.id})">
+        //                     ✏️ Sửa
+        //                 </button>
+        //                 <button class="btn btn-danger" style="padding: 8px 15px;" onclick="deleteFee(${fee.id})">
+        //                     🗑️ Xóa
+        //                 </button>
+        //             </td>
+        //         </tr>
+        //     `).join('');
+        // }
 
-        // Render payments table
-        function renderPayments(data = payments) {
-            const tbody = document.getElementById('paymentsTable');
-            tbody.innerHTML = data.map(payment => {
-                const resident = residents.find(r => r.id === payment.apartmentId);
-                const fee = fees.find(f => f.id === payment.feeId);
+        // // Render payments table
+        // function renderPayments(data = payments) {
+        //     const tbody = document.getElementById('paymentsTable');
+        //     tbody.innerHTML = data.map(payment => {
+        //         const resident = residents.find(r => r.id === payment.apartmentId);
+        //         const fee = fees.find(f => f.id === payment.feeId);
                 
-                return `
-                    <tr>
-                        <td>${formatDate(payment.date)}</td>
-                        <td>${resident ? resident.apartmentNumber : 'N/A'}</td>
-                        <td>${fee ? fee.name : 'N/A'}</td>
-                        <td>${formatCurrency(payment.amount)}</td>
-                        <td>
-                            <span class="status-badge ${getPaymentStatusClass(payment.status)}">
-                                ${getPaymentStatusText(payment.status)}
-                            </span>
-                        </td>
-                        <td>${payment.note || 'Không có'}</td>
-                        <td>
-                            <button class="btn btn-warning" style="padding: 8px 15px; margin-right: 5px;" onclick="editPayment(${payment.id})">
-                                ✏️ Sửa
-                            </button>
-                            <button class="btn btn-danger" style="padding: 8px 15px;" onclick="deletePayment(${payment.id})">
-                                🗑️ Xóa
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
+        //         return `
+        //             <tr>
+        //                 <td>${formatDate(payment.date)}</td>
+        //                 <td>${resident ? resident.apartmentNumber : 'N/A'}</td>
+        //                 <td>${fee ? fee.name : 'N/A'}</td>
+        //                 <td>${formatCurrency(payment.amount)}</td>
+        //                 <td>
+        //                     <span class="status-badge ${getPaymentStatusClass(payment.status)}">
+        //                         ${getPaymentStatusText(payment.status)}
+        //                     </span>
+        //                 </td>
+        //                 <td>${payment.note || 'Không có'}</td>
+        //                 <td>
+        //                     <button class="btn btn-warning" style="padding: 8px 15px; margin-right: 5px;" onclick="editPayment(${payment.id})">
+        //                         ✏️ Sửa
+        //                     </button>
+        //                     <button class="btn btn-danger" style="padding: 8px 15px;" onclick="deletePayment(${payment.id})">
+        //                         🗑️ Xóa
+        //                     </button>
+        //                 </td>
+        //             </tr>
+        //         `;
+        //     }).join('');
+        // }
 
         // Populate select options
-        function populateSelectOptions() {
-            const apartmentSelect = document.getElementById('paymentApartment');
-            apartmentSelect.innerHTML = '<option value="">Chọn căn hộ</option>' +
-                residents.map(r => `<option value="${r.id}">${r.apartmentNumber} - ${r.ownerName}</option>`).join('');
+        // function populateSelectOptions() {
+        //     const apartmentSelect = document.getElementById('paymentApartment');
+        //     apartmentSelect.innerHTML = '<option value="">Chọn căn hộ</option>' +
+        //         residents.map(r => `<option value="${r.id}">${r.apartmentNumber} - ${r.ownerName}</option>`).join('');
 
-            const feeSelect = document.getElementById('paymentFeeType');
-            feeSelect.innerHTML = '<option value="">Chọn loại phí</option>' +
-                fees.filter(f => f.status === 'active').map(f => `<option value="${f.id}">${f.name}</option>`).join('');
-        }
+        //     const feeSelect = document.getElementById('paymentFeeType');
+        //     feeSelect.innerHTML = '<option value="">Chọn loại phí</option>' +
+        //         fees.filter(f => f.status === 'active').map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+        // }
 
         // Filter functions
         function filterResidents(searchTerm) {
@@ -1198,7 +1340,7 @@
                 r.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (r.phone && r.phone.includes(searchTerm))
             );
-            renderResidents(filtered);
+            // renderResidents(filtered);
         }
 
         function filterFees(searchTerm) {
@@ -1221,18 +1363,10 @@
         }
 
         // Modal functions
-        function openResidentModal() {
-            document.getElementById('residentModal').style.display = 'block';
-            document.getElementById('residentModalTitle').textContent = 'Thêm cư dân mới';
-            document.getElementById('residentForm').reset();
-            editingId = null;
-            editingType = 'resident';
-        }
-
         function openFeeModal() {
             document.getElementById('feeModal').style.display = 'block';
             document.getElementById('feeModalTitle').textContent = 'Thêm loại phí mới';
-            document.getElementById('feeForm').reset();
+            //document.getElementById('feeForm').reset();
             editingId = null;
             editingType = 'fee';
         }
@@ -1253,197 +1387,461 @@
         }
 
         // Save functions
-        function saveResident(e) {
-            e.preventDefault();
+        // function saveResident(e) {
+        //     e.preventDefault();
             
-            const formData = {
-                apartmentNumber: document.getElementById('apartmentNumber').value,
-                ownerName: document.getElementById('ownerName').value,
-                phone: document.getElementById('phone').value,
-                area: parseFloat(document.getElementById('area').value) || 0,
-                email: document.getElementById('email').value,
-                status: document.getElementById('residentStatus').value
-            };
+        //     const formData = {
+        //         apartmentNumber: document.getElementById('apartmentNumber').value,
+        //         ownerName: document.getElementById('ownerName').value,
+        //         phone: document.getElementById('phone').value,
+        //         area: parseFloat(document.getElementById('area').value) || 0,
+        //         email: document.getElementById('email').value,
+        //         status: document.getElementById('residentStatus').value
+        //     };
 
-            if (editingId) {
-                const index = residents.findIndex(r => r.id === editingId);
-                residents[index] = { ...residents[index], ...formData };
-            } else {
-                const newId = Math.max(...residents.map(r => r.id), 0) + 1;
-                residents.push({ id: newId, ...formData });
-            }
+        //     if (editingId) {
+        //         const index = residents.findIndex(r => r.id === editingId);
+        //         residents[index] = { ...residents[index], ...formData };
+        //     } else {
+        //         const newId = Math.max(...residents.map(r => r.id), 0) + 1;
+        //         residents.push({ id: newId, ...formData });
+        //     }
 
-            renderResidents();
-            populateSelectOptions();
-            updateDashboardStats();
-            closeModal('residentModal');
-        }
+        //     // renderResidents();
+        //     populateSelectOptions();
+        //     updateDashboardStats();
+        //     closeModal('residentModal');
+        // }
 
-        function saveFee(e) {
-            e.preventDefault();
+        // function saveFee(e) {
+        //     e.preventDefault();
             
-            const formData = {
-                name: document.getElementById('feeName').value,
-                amount: parseInt(document.getElementById('feeAmount').value),
-                unit: document.getElementById('feeUnit').value,
-                description: document.getElementById('feeDescription').value,
-                status: document.getElementById('feeStatus').value
-            };
+        //     const formData = {
+        //         name: document.getElementById('feeName').value,
+        //         amount: parseInt(document.getElementById('feeAmount').value),
+        //         unit: document.getElementById('feeUnit').value,
+        //         description: document.getElementById('feeDescription').value,
+        //         status: document.getElementById('feeStatus').value
+        //     };
 
-            if (editingId) {
-                const index = fees.findIndex(f => f.id === editingId);
-                fees[index] = { ...fees[index], ...formData };
-            } else {
-                const newId = Math.max(...fees.map(f => f.id), 0) + 1;
-                fees.push({ id: newId, ...formData });
-            }
+        //     if (editingId) {
+        //         const index = fees.findIndex(f => f.id === editingId);
+        //         fees[index] = { ...fees[index], ...formData };
+        //     } else {
+        //         const newId = Math.max(...fees.map(f => f.id), 0) + 1;
+        //         fees.push({ id: newId, ...formData });
+        //     }
 
-            renderFees();
-            populateSelectOptions();
-            closeModal('feeModal');
-        }
+        //     renderFees();
+        //     //populateSelectOptions();
+        //     closeModal('feeModal');
+        // }
 
-        function savePayment(e) {
-            e.preventDefault();
+        // function savePayment(e) {
+        //     e.preventDefault();
             
-            const formData = {
-                date: document.getElementById('paymentDate').value,
-                apartmentId: parseInt(document.getElementById('paymentApartment').value),
-                feeId: parseInt(document.getElementById('paymentFeeType').value),
-                amount: parseInt(document.getElementById('paymentAmount').value),
-                status: document.getElementById('paymentStatus').value,
-                note: document.getElementById('paymentNote').value
-            };
+        //     const formData = {
+        //         date: document.getElementById('paymentDate').value,
+        //         apartmentId: parseInt(document.getElementById('paymentApartment').value),
+        //         feeId: parseInt(document.getElementById('paymentFeeType').value),
+        //         amount: parseInt(document.getElementById('paymentAmount').value),
+        //         status: document.getElementById('paymentStatus').value,
+        //         note: document.getElementById('paymentNote').value
+        //     };
 
-            if (editingId) {
-                const index = payments.findIndex(p => p.id === editingId);
-                payments[index] = { ...payments[index], ...formData };
-            } else {
-                const newId = Math.max(...payments.map(p => p.id), 0) + 1;
-                payments.push({ id: newId, ...formData });
-            }
+        //     if (editingId) {
+        //         const index = payments.findIndex(p => p.id === editingId);
+        //         payments[index] = { ...payments[index], ...formData };
+        //     } else {
+        //         const newId = Math.max(...payments.map(p => p.id), 0) + 1;
+        //         payments.push({ id: newId, ...formData });
+        //     }
 
-            renderPayments();
-            updateDashboardStats();
-            closeModal('paymentModal');
-        }
+        //     renderPayments();
+        //     updateDashboardStats();
+        //     closeModal('paymentModal');
+        // }
 
         // Edit functions
-        function editResident(id) {
-            const resident = residents.find(r => r.id === id);
-            if (!resident) return;
+        // function editResident(id) {
+        //     const resident = residents.find(r => r.id === id);
+        //     if (!resident) return;
 
-            document.getElementById('apartmentNumber').value = resident.apartmentNumber;
-            document.getElementById('ownerName').value = resident.ownerName;
-            document.getElementById('phone').value = resident.phone || '';
-            document.getElementById('area').value = resident.area || '';
-            document.getElementById('email').value = resident.email || '';
-            document.getElementById('residentStatus').value = resident.status;
+        //     document.getElementById('apartmentNumber').value = resident.apartmentNumber;
+        //     document.getElementById('ownerName').value = resident.ownerName;
+        //     document.getElementById('phone').value = resident.phone || '';
+        //     document.getElementById('area').value = resident.area || '';
+        //     document.getElementById('email').value = resident.email || '';
+        //     document.getElementById('residentStatus').value = resident.status;
 
-            document.getElementById('residentModalTitle').textContent = 'Chỉnh sửa cư dân';
-            document.getElementById('residentModal').style.display = 'block';
-            editingId = id;
-            editingType = 'resident';
-        }
+        //     document.getElementById('residentModalTitle').textContent = 'Chỉnh sửa cư dân';
+        //     document.getElementById('residentModal').style.display = 'block';
+        //     editingId = id;
+        //     editingType = 'resident';
+        // }
 
-        function editFee(id) {
-            const fee = fees.find(f => f.id === id);
-            if (!fee) return;
+        // function editFee(id) {
+        //     const fee = fees.find(f => f.id === id);
+        //     if (!fee) return;
 
-            document.getElementById('feeName').value = fee.name;
-            document.getElementById('feeAmount').value = fee.amount;
-            document.getElementById('feeUnit').value = fee.unit;
-            document.getElementById('feeDescription').value = fee.description || '';
-            document.getElementById('feeStatus').value = fee.status;
+        //     document.getElementById('feeName').value = fee.name;
+        //     document.getElementById('feeAmount').value = fee.amount;
+        //     document.getElementById('feeUnit').value = fee.unit;
+        //     document.getElementById('feeDescription').value = fee.description || '';
+        //     document.getElementById('feeStatus').value = fee.status;
 
-            document.getElementById('feeModalTitle').textContent = 'Chỉnh sửa loại phí';
-            document.getElementById('feeModal').style.display = 'block';
-            editingId = id;
-            editingType = 'fee';
-        }
+        //     document.getElementById('feeModalTitle').textContent = 'Chỉnh sửa loại phí';
+        //     document.getElementById('feeModal').style.display = 'block';
+        //     editingId = id;
+        //     editingType = 'fee';
+        // }
 
-        function editPayment(id) {
-            const payment = payments.find(p => p.id === id);
-            if (!payment) return;
+        // function editPayment(id) {
+        //     const payment = payments.find(p => p.id === id);
+        //     if (!payment) return;
 
-            document.getElementById('paymentDate').value = payment.date;
-            document.getElementById('paymentApartment').value = payment.apartmentId;
-            document.getElementById('paymentFeeType').value = payment.feeId;
-            document.getElementById('paymentAmount').value = payment.amount;
-            document.getElementById('paymentStatus').value = payment.status;
-            document.getElementById('paymentNote').value = payment.note || '';
+        //     document.getElementById('paymentDate').value = payment.date;
+        //     //document.getElementById('paymentApartment').value = payment.apartmentId;
+        //     document.getElementById('paymentFeeType').value = payment.feeId;
+        //     document.getElementById('paymentAmount').value = payment.amount;
+        //     document.getElementById('paymentStatus').value = payment.status;
+        //     document.getElementById('paymentNote').value = payment.note || '';
 
-            document.getElementById('paymentModalTitle').textContent = 'Chỉnh sửa giao dịch';
-            document.getElementById('paymentModal').style.display = 'block';
-            editingId = id;
-            editingType = 'payment';
-        }
+        //     document.getElementById('paymentModalTitle').textContent = 'Chỉnh sửa giao dịch';
+        //     document.getElementById('paymentModal').style.display = 'block';
+        //     editingId = id;
+        //     editingType = 'payment';
+        // }
 
         // Delete functions
-        function deleteResident(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa cư dân này?')) {
-                residents = residents.filter(r => r.id !== id);
-                renderResidents();
-                populateSelectOptions();
-                updateDashboardStats();
-            }
-        }
+        // function deleteResident(id) {
+        //     if (confirm('Bạn có chắc chắn muốn xóa cư dân này?')) {
+        //         residents = residents.filter(r => r.id !== id);
+        //         // renderResidents();
+        //         //populateSelectOptions();
+        //         updateDashboardStats();
+        //     }
+        // }
 
-        function deleteFee(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa loại phí này?')) {
-                fees = fees.filter(f => f.id !== id);
-                renderFees();
-                populateSelectOptions();
-            }
-        }
+        // function deleteFee(id) {
+        //     if (confirm('Bạn có chắc chắn muốn xóa loại phí này?')) {
+        //         fees = fees.filter(f => f.id !== id);
+        //         renderFees();
+        //         //populateSelectOptions();
+        //     }
+        // }
 
-        function deletePayment(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) {
-                payments = payments.filter(p => p.id !== id);
-                renderPayments();
-                updateDashboardStats();
-            }
-        }
+        // function deletePayment(id) {
+        //     if (confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) {
+        //         payments = payments.filter(p => p.id !== id);
+        //         renderPayments();
+        //         updateDashboardStats();
+        //     }
+        // }
 
-        // Utility functions
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND'
-            }).format(amount);
-        }
+        // // Utility functions
+        // function formatCurrency(amount) {
+        //     return new Intl.NumberFormat('vi-VN', {
+        //         style: 'currency',
+        //         currency: 'VND'
+        //     }).format(amount);
+        // }
 
-        function formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString('vi-VN');
-        }
+        // function formatDate(dateString) {
+        //     return new Date(dateString).toLocaleDateString('vi-VN');
+        // }
 
-        function getFeeUnitText(unit) {
-            const units = {
-                'per_month': 'Tháng',
-                'per_m2': 'm²',
-                'per_person': 'Người',
-                'fixed': 'Cố định'
-            };
-            return units[unit] || unit;
-        }
+        // function getFeeUnitText(unit) {
+        //     const units = {
+        //         'per_month': 'Tháng',
+        //         'per_m2': 'm²',
+        //         'per_person': 'Người',
+        //         'fixed': 'Cố định'
+        //     };
+        //     return units[unit] || unit;
+        // }
 
-        function getPaymentStatusClass(status) {
-            const classes = {
-                'paid': 'status-paid',
-                'unpaid': 'status-unpaid',
-                'overdue': 'status-overdue'
-            };
-            return classes[status] || 'status-unpaid';
-        }
+        // function getPaymentStatusClass(status) {
+        //     const classes = {
+        //         'paid': 'status-paid',
+        //         'unpaid': 'status-unpaid',
+        //         'overdue': 'status-overdue'
+        //     };
+        //     return classes[status] || 'status-unpaid';
+        // }
 
-        function getPaymentStatusText(status) {
-            const texts = {
-                'paid': '🟢 Đã thanh toán',
-                'unpaid': '⭕ Chưa thanh toán',
-                'overdue': '🔴 Quá hạn'
-            };
-            return texts[status] || status;
+        // function getPaymentStatusText(status) {
+        //     const texts = {
+        //         'paid': '🟢 Đã thanh toán',
+        //         'unpaid': '⭕ Chưa thanh toán',
+        //         'overdue': '🔴 Quá hạn'
+        //     };
+        //     return texts[status] || status;
+        // }
+
+    function toggleHouseholdSelect(value) {
+    const group = document.getElementById('householdSelectGroup');
+    group.style.display = value === 'false' ? 'block' : 'none';
+}
+
+    document.getElementById('feeForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData(this);
+
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(async res => {
+        const contentType = res.headers.get("content-type");
+        if (!res.ok) throw new Error("Server trả lỗi");
+
+        if (contentType && contentType.includes("application/json")) {
+            return res.json();
+        } else {
+            throw new Error("Phản hồi không phải JSON");
         }
-    </script>
+    })
+    .then(data => {
+        if (data.success) {
+            alert('✔️ Thêm loại phí thành công!');
+            closeModal('feeModal');
+            document.getElementById('feeForm').reset();
+
+            const tableBody = document.getElementById('feesTable');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${data.title}</td>
+                <td>${parseFloat(data.amount).toFixed(2)}</td>
+                <td>${data.type}</td>
+                <td>${data.due_date}</td>
+                <td>${data.description || ''}</td>
+                <td>${document.querySelector('#currentUsername')?.textContent || 'Bạn'}</td>
+                <td>${new Date().toLocaleString()}</td>
+            `;
+            tableBody.appendChild(newRow);
+        } else {
+            alert('❌ Dữ liệu không hợp lệ');
+            console.error(data.errors);
+        }
+    })
+    .catch(err => {
+        alert('❌ Không thể thêm loại phí: ' + err.message);
+        console.error(err);
+    });
+});
+
+   
+function exportReport() {
+    const monthInput = document.getElementById("reportMonth").value;
+    if (!monthInput) {
+        alert("Vui lòng chọn tháng");
+        return;
+    }
+
+    fetch(`/ketoan/?month=${monthInput}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Không thể xuất báo cáo");
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bao_cao_phi_${monthInput}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    })
+    .catch(err => {
+        alert("❌ Xuất báo cáo thất bại!");
+        console.error(err);
+    });
+}
+
+function exportDebtList() {
+    fetch('/ketoan/?debt=1', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Không thể xuất danh sách nợ');
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `danh_sach_no.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    })
+    .catch(err => {
+        alert('❌ Xuất thất bại!');
+        console.error(err);
+    });
+}
+
+function editPayment(paymentId) {
+    // Fetch payment data (có thể là từ biến hoặc gọi API nếu cần)
+    const row = document.querySelector(`button[onclick="editPayment('${paymentId}')"]`).closest('tr');
+    
+    // Gán các giá trị vào form
+    document.getElementById('editPaymentId').value = paymentId;
+    document.getElementById('editPaidAt').value = toDatetimeLocal(row.cells[0].innerText);
+    document.getElementById('editMethod').value = row.cells[5].innerText.trim().toLowerCase();
+    document.getElementById('editStatus').value = row.cells[4].innerText.trim().toLowerCase();
+
+    // Hiện modal
+    document.getElementById('editPaymentModal').style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function toDatetimeLocal(datetimeStr) {
+    // Chuyển định dạng d/m/Y H:i -> yyyy-MM-ddTHH:mm cho input datetime-local
+    const [date, time] = datetimeStr.split(" ");
+    const [day, month, year] = date.split("/");
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}`;
+}
+function openPaymentEditModal(paymentId, paidAt, status, method) {
+    document.getElementById("editPaymentId").value = paymentId;
+    document.getElementById("editPaidAt").value = paidAt;
+    document.getElementById("editStatus").value = status;
+    document.getElementById("editMethod").value = method;
+    document.getElementById("editPaymentModal").style.display = "block";
+}
+
+function submitEditForm(event) {
+    event.preventDefault();
+
+    const payment_id = document.getElementById("editPaymentId").value;
+    const paid_at = document.getElementById("editPaidAt").value;
+    const status = document.getElementById("editStatus").value;
+    const method = document.getElementById("editMethod").value;
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+    fetch("/update_payment/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify({
+            payment_id: payment_id,
+            paid_at: paid_at,
+            status: status,
+            method: method
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Cập nhật thành công!");
+            closeModal('editPaymentModal');
+            // Cập nhật lại bảng hoặc dữ liệu nếu cần
+        } else {
+            alert("Cập nhật thất bại: " + data.error);
+        }
+    })
+    .catch(error => {
+        alert("Lỗi mạng hoặc server");
+        console.error(error);
+    });
+}
+
+
+function formatDatetime(datetimeString) {
+    const date = new Date(datetimeString);
+    return date.toLocaleString("vi-VN");
+}
+
+function getMethodDisplay(method) {
+    switch(method) {
+        case 'cash': return 'Cash';
+        case 'card': return 'Card';
+        case 'qr_code': return 'QR';
+        default: return method;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const fixedColors = [
+        "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
+        "#FF9F40", "#C9CBCF", "#B4E197", "#FF6B6B", "#6C5B7B",
+        "#355C7D", "#F67280", "#F8B195", "#C06C84", "#6C567B",
+        "#E1B12C", "#0097E6", "#44BD32", "#8C7AE6", "#E84118"
+    ];
+
+    fetch("/revenue_pie_data/")
+        .then(response => response.json())
+        .then(data => {
+            const labels = data.map(item => item.title);
+            const values = data.map(item => item.value);
+            const backgroundColors = fixedColors.slice(0, labels.length);
+
+            const ctx = document.getElementById('revenuePieChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Tỉ lệ doanh thu',
+                        data: values,
+                        backgroundColor: backgroundColors,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 20,
+                                padding: 15,
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Lỗi khi tải dữ liệu biểu đồ:", error);
+        });
+});
+
+function confirmLogout() {
+    return confirm("Đăng xuất khỏi tài khoản của bạn?");
+}
+
+</script>
+
 </body>
 </html>

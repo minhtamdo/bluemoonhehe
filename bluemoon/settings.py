@@ -15,6 +15,8 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+LOGIN_URL = '/login/'
+# LOGIN_REDIRECT_URL = '/ketoan/'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -77,9 +79,9 @@ WSGI_APPLICATION = 'bluemoon.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bluemoon',
+        'NAME': 'toanha',
         'USER': 'postgres',
-        'PASSWORD': 'aizen',
+        'PASSWORD': 'toughgirlmask2912',
         'HOST': 'localhost',
         'PORT': '5433',  # cổng mặc định PostgreSQL
     }
@@ -110,7 +112,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Ho_Chi_Minh'  # múi giờ Việt Nam
+USE_TZ = True
 
 USE_I18N = True
 
