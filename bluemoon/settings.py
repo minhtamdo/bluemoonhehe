@@ -79,11 +79,11 @@ WSGI_APPLICATION = 'bluemoon.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'toanha',
+        'NAME': 'Complex',
         'USER': 'postgres',
-        'PASSWORD': 'toughgirlmask2912',
+        'PASSWORD': '_Iris.23_',
         'HOST': 'localhost',
-        'PORT': '5433',  # cổng mặc định PostgreSQL
+        'PORT': '5432',  # cổng mặc định PostgreSQL
     }
 }
 
